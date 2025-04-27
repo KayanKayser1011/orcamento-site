@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Criar Orçamento</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Criar Orçamento</h1>
+
+  <form id="orcamentoForm">
+    <label>Selecione o Cliente:</label><br>
+    <select id="clienteSelect" required></select><br><br>
+
+    <label>Selecione os Produtos:</label><br>
+    <div id="produtosCheckboxes"></div><br>
+
+    <button type="submit">Gerar PDF</button>
+  </form>
+
+  <script>
+    async function carregarDados() {
+      const clientes = await fetch('http://localhost:3000/clientes').then(res => res.json());
+      const produtos = await fetch('http://localhost:3000/produtos').then(res => res.json());
+
+      const clienteSelect = document.getElementById('clienteSelect');
+      clientes.forEach(cliente => {
+        const option = document.createElement('option');
+        option.value = cliente.id;
+        option.textContent = cliente.nome;
+        clienteSelect.appendChild(option);
+      });
+
+      const produtosCheckboxes = document.getElementById('produtosCheckboxes');
+      produtos.forEach(produto => {
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" value="${produto.id}"> ${produto.nome} (R$${produto.preco.toFixed(2)})<br>`;
+        produtosCheckboxes.appendChild(label);
+      });
+    }
+
+    document.getElementById('orcamentoForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const clienteId = document.getElementById('clienteSelect').value;
+      const produtosIds = Array.from(document.querySelectorAll('#produtosCheckboxes input:checked')).map(input => input.value);
+
+      if (produtosIds.length === 0) {
+        alert('Selecione pelo menos um produto.');
+        return;
+      }
+
+      const res = await fetch('http://localhost:3000/orcamento', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ clienteId, produtosIds })
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'orcamento.pdf';
+        a.click();
+      }
+    });
+
+    carregarDados();
+  </script>
+</body>
+</html>
